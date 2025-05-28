@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contenido de Script Python Remoto</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #eef2f7;
+            color: #34495e;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .info-box {
+            background-color: #d6eaf8;
+            border: 1px solid #aed6f1;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 0.95em;
+        }
+        .info-box code {
+            background-color: #c0deed;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        iframe {
+            width: 100%;
+            height: 70vh; /* 70% del alto de la ventana del navegador */
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            background-color: #ffffff;
+            /* Estilos para navegadores antiguos */
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+        ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            padding-left: 0;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visualizador de Script Python desde el Servidor Rocks</h1>
+
+    <div class="info-box">
+        <p>Este documento HTML cargará y mostrará el contenido de un script Python directamente desde tu nodo maestro de Rocks.</p>
+        <p><strong>Configuración Necesaria en tu Nodo Maestro de Rocks:</strong></p>
+        <ul>
+            <li>Asegúrate de que un servidor web simple (como <code>python3 -m http.server 8000</code>) esté ejecutándose en tu nodo maestro de Rocks (Front End).</li>
+            <li>El archivo de tu script Python (ej., <code>mi_script.py</code>) debe estar en el directorio donde iniciaste el servidor HTTP.</li>
+            <li>El puerto <code>8000</code> (o el que uses) debe estar abierto en el firewall de tu nodo maestro de Rocks.</li>
+            <li>La dirección IP de tu nodo maestro de Rocks (Front End) para acceder desde el host es <code>10.0.3.15</code>[cite: 15].</li>
+        </ul>
+        <p>Si la configuración es correcta, el contenido de tu script aparecerá a continuación.</p>
+    </div>
+
+    <h2>Contenido de `mi_script.py`:</h2>
+    <iframe src="http://10.0.3.15:8000/mi_script.py"></iframe>
+
+    <h2>Notas:</h2>
+    <ul>
+        <li>Este método utiliza un <code>&lt;iframe&gt;</code> para incrustar el contenido raw del archivo.</li>
+        <li>El servidor web en Rocks debe servir el archivo Python con el tipo de contenido adecuado (<code>text/plain</code>), lo cual <code>python3 -m http.server</code> hace por defecto.</li>
+        <li>Si no ves el contenido, verifica la consola de errores de tu navegador (F12) y los pasos de configuración en tu nodo maestro de Rocks.</li>
+    </ul>
+
+</body>
+</html>
