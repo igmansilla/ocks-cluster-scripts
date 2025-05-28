@@ -1,3 +1,12 @@
+# Contenido del Script Python
+
+Este archivo Markdown contiene el código fuente de un script Python. Puedes copiarlo y ejecutarlo directamente en tu nodo maestro de Rocks o en cualquier otro entorno Python.
+
+---
+
+## `simple_cpu_stress.py`
+
+```python
 import time
 import math
 import os
