@@ -1,94 +1,81 @@
-# Script de Test de Stress Distribuido para Rocks Cluster (Python 2.6.6)
+# Script de Stress Extremo para Nodo Maestro (Python 2.6.6)
 
-Este archivo Markdown contiene el codigo fuente de un script Python disenado para generar carga de CPU en los nodos esclavos de tu cluster Rocks. Esta version esta adaptada para Python 2.6.6.
+Este script esta disenado para consumir una cantidad significativa de CPU y memoria en el nodo donde se ejecuta (tu nodo maestro de Rocks). No intenta conectarse ni afectar a otros nodos del cluster.
 
-**Importante:** Para que este script funcione correctamente, debes haber configurado SSH sin contrasena desde tu nodo maestro de Rocks hacia cada uno de tus nodos esclavos.
+**Advertencia:** Este script es intensivo. Asegurate de que tu nodo maestro tiene suficientes recursos y monitorea su comportamiento con Ganglia mientras se ejecuta. Podria ralentizar el sistema.
 
 ---
 
-## `distributed_stress_test.py` (Python 2.6.6 - Corregido para errores ASCII)
+## `extreme_master_stress.py` (Python 2.6.6 - Sin tildes, solo para el maestro)
 
 ```python
 # -*- coding: utf-8 -*-
-import os
-import subprocess
 import time
 import math
 import sys
 
-def run_stress_on_slave(slave_ip_or_hostname, num_processes, duration_seconds):
-    """
-    Ejecuta un comando de stress en un nodo esclavo via SSH.
-    Asume que tienes SSH sin contrasena configurado desde el maestro a los esclavos.
-    """
-    # Python 2.6.6 usa 'print' como una sentencia
-    print "Enviando stress a %s con %s procesos por %s segundos..." % (slave_ip_or_hostname, num_processes, duration_seconds)
-    
-    # Comando de Python para consumir CPU en el esclavo.
-    # Nota: Usamos 'python' en lugar de 'python3' para invocar Python 2.
-    # Algunas funciones como range en Python 2.x pueden devolver listas muy grandes
-    # para evitar problemas de memoria, podriamos usar xrange si fuera necesario
-    # para iteraciones muy muy grandes, pero 10000 es manejable.
-    stress_command = "python -c \"import math, time; start_time = time.time(); while time.time() - start_time < %s: [math.factorial(i %% 1000) for i in range(10000)];\"" % duration_seconds
-    
-    # El comando completo para ejecutar en el esclavo en segundo plano (nohup &)
-    full_command = "ssh %s 'for i in $(seq %s); do nohup %s > /dev/null 2>&1 & done'" % (slave_ip_or_hostname, num_processes, stress_command)
+# --- Parametros Configurables ---
+CPU_STRESS_PROCESSES = 4 # Numero de procesos o hilos de CPU intensivo
+                          # Ajusta segun el numero de CPUs/cores de tu maestro
+MEM_ALLOC_MB = 2048       # Cantidad de memoria a intentar asignar en MB (2GB por defecto)
+                          # Ajusta segun la RAM disponible en tu maestro (ej. 2GB RAM -> 1500MB)
+STRESS_DURATION_SECONDS = 180 # Duracion total del stress en segundos (3 minutos)
+# --------------------------------
 
+def cpu_intensive_task(duration):
+    """Realiza calculos intensivos de CPU durante una duracion especifica."""
+    end_time = time.time() + duration
+    counter = 0
+    while time.time() < end_time:
+        _ = math.factorial(5000) # Un numero grande para calculos pesados
+        counter += 1
+    # print "  CPU task finished after %s iterations." % counter # Descomentar para debug
+
+def memory_intensive_task(size_mb):
+    """Intenta asignar una gran cantidad de memoria."""
+    print "Intentando asignar %s MB de memoria..." % size_mb
     try:
-        # En Python 2.6, Popen de subprocess.Popen funciona de manera similar.
-        # shell=True es necesario para que el shell interprete el comando completo.
-        subprocess.Popen(full_command, shell=True) 
-        print "Comando de stress enviado a %s" % slave_ip_or_hostname
+        # En Python 2, string * N crea un string de N copias
+        # ' ' * 1024 * 1024 crea 1MB de espacios.
+        # Creamos una lista de estos para evitar que el GC lo recoja inmediatamente.
+        data = []
+        for i in range(size_mb):
+            data.append(' ' * 1024 * 1024) # 1 MB de datos por elemento
+        print "Asignados %s MB de memoria. Manteniendo en RAM por un tiempo." % size_mb
+        return data # Devolvemos para mantener la referencia y evitar GC
+    except MemoryError:
+        print "Error: No se pudo asignar %s MB de memoria. Puede que no haya suficiente RAM disponible." % size_mb
+        return None
     except Exception as e:
-        print "Error al enviar stress a %s: %s" % (slave_ip_or_hostname, e)
-
-def get_slave_hostnames():
-    """
-    Obtiene la lista de nombres de host de los nodos esclavos desde Rocks.
-    """
-    try:
-        # En Python 2, 'subprocess.check_output' no existe. Usamos 'subprocess.Popen' y 'communicate'.
-        # 'text=True' no existe en Python 2, la salida es bytes.
-        proc = subprocess.Popen(['/opt/rocks/bin/rocks', 'list', 'host'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout_data, stderr_data = proc.communicate()
-        
-        # La salida es bytes, asi que necesitamos decodificarla. 'utf-8' es una buena opcion.
-        # Si hay un error, proc.returncode sera distinto de 0.
-        if proc.returncode != 0:
-            raise Exception("Error al ejecutar 'rocks list host': %s" % stderr_data.strip())
-
-        lines = stdout_data.decode('utf-8').splitlines() # Decodificamos y separamos por lineas
-        slaves = []
-        for line in lines:
-            if line.startswith("compute"): # Los nodos esclavos en Rocks se nombran 'compute-X-Y'
-                hostname = line.split()[0]
-                slaves.append(hostname)
-        return slaves
-    except Exception as e:
-        print "Error al obtener nombres de host de esclavos: %s" % e
-        return []
+        print "Ocurrio un error al asignar memoria: %s" % e
+        return None
 
 if __name__ == "__main__":
-    # Parametros configurables
-    NUM_PROCESSES_PER_SLAVE = 2  # Numero de procesos "stress" a ejecutar en cada esclavo
-    STRESS_DURATION_SECONDS = 60 # Duracion del stress en segundos
+    print "Iniciando test de stress extremo en el nodo maestro..."
+    print "Este script estresara la CPU y intentara consumir memoria."
 
-    print "Iniciando test de stress en el cluster Rocks..."
+    # --- Stress de CPU ---
+    # Para Python 2.6.6, no tenemos multiprocessing.Pool de forma sencilla.
+    # Simulamos procesos concurrentes con subprocesos o simplemente ejecutamos un loop largo.
+    # Si quieres procesos realmente paralelos en Python 2.6.6, necesitarias el modulo 'multiprocessing'
+    # (que puede requerir instalarlo si no viene con 2.6.6) y usar Process.start().
+    # Por simplicidad y para asegurar que siempre funcione, lo haremos secuencialmente o con subprocesos
+    # si se desea emular un poco de paralelismo sin depender de modulos avanzados.
 
-    slave_hosts = get_slave_hostnames()
+    # Option 1: CPU intensivo en un solo hilo/proceso (mas sencillo)
+    print "Ejecutando tarea intensiva de CPU durante %s segundos..." % STRESS_DURATION_SECONDS
+    cpu_intensive_task(STRESS_DURATION_SECONDS)
 
-    if not slave_hosts:
-        print "No se encontraron nodos esclavos. Asegurate de que esten registrados y activos."
-        sys.exit(1)
+    # Option 2: Ejecutar multiples procesos de CPU en paralelo (requiere 'multiprocessing' si quieres control)
+    # Si no tienes 'multiprocessing' instalado, puedes lanzar via 'nohup python -c ... &'
+    # Esto es mas complejo para un script simple sin SSH
+    # Asi que la Option 1 es la mas directa para "solo haga trabajar al maestro"
 
-    print "Nodos esclavos detectados: %s" % ', '.join(slave_hosts)
+    # --- Stress de Memoria ---
+    allocated_memory = memory_intensive_task(MEM_ALLOC_MB)
+    if allocated_memory:
+        print "Memoria asignada. Manteniendola durante %s segundos..." % STRESS_DURATION_SECONDS
+        time.sleep(STRESS_DURATION_SECONDS) # Mantenemos la memoria asignada
 
-    for slave in slave_hosts:
-        run_stress_on_slave(slave, NUM_PROCESSES_PER_SLAVE, STRESS_DURATION_SECONDS)
-
-    print "\nScripts de stress enviados a los nodos esclavos. Esperando %s segundos para monitorear el impacto..." % STRESS_DURATION_SECONDS
-    print "Mientras tanto, abre la interfaz web de Ganglia en tu navegador para ver los resultados."
-    
-    time.sleep(STRESS_DURATION_SECONDS + 10) # Da tiempo extra para que Ganglia actualice
-
-    print "\nTest de stress finalizado. Revisa Ganglia para el analisis completo."
+    print "\nTest de stress extremo finalizado."
+    print "Revisa la interfaz web de Ganglia para ver el impacto en la CPU y memoria del nodo maestro."
