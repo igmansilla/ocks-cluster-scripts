@@ -2,13 +2,14 @@
 
 Este archivo Markdown contiene el codigo fuente de un script Python disenado para generar carga de CPU en los nodos esclavos de tu cluster Rocks. Esta version esta adaptada para Python 2.6.6.
 
-**Importante:** Para que este script funcione correctamente, debes haber configurado SSH sin contraseña desde tu nodo maestro de Rocks hacia cada uno de tus nodos esclavos.
+**Importante:** Para que este script funcione correctamente, debes haber configurado SSH sin contrasena desde tu nodo maestro de Rocks hacia cada uno de tus nodos esclavos.
 
 ---
 
-## `distributed_stress_test.py` (Python 2.6.6)
+## `distributed_stress_test.py` (Python 2.6.6 - Corregido para errores ASCII)
 
 ```python
+# -*- coding: utf-8 -*-
 import os
 import subprocess
 import time
@@ -18,7 +19,7 @@ import sys
 def run_stress_on_slave(slave_ip_or_hostname, num_processes, duration_seconds):
     """
     Ejecuta un comando de stress en un nodo esclavo via SSH.
-    Asume que tienes SSH sin contraseña configurado desde el maestro a los esclavos.
+    Asume que tienes SSH sin contrasena configurado desde el maestro a los esclavos.
     """
     # Python 2.6.6 usa 'print' como una sentencia
     print "Enviando stress a %s con %s procesos por %s segundos..." % (slave_ip_or_hostname, num_processes, duration_seconds)
